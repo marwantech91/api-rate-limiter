@@ -77,4 +77,33 @@ export function rateLimit(options: RateLimitOptions) {
   };
 }
 
+// Sliding window rate limiter for more accurate rate limiting
+export class SlidingWindowStore implements Store {
+  private logs: Map<string, number[]> = new Map();
+  private windowMs: number;
+
+  constructor(windowMs: number) {
+    this.windowMs = windowMs;
+  }
+
+  async increment(key: string): Promise<{ count: number; resetTime: number }> {
+    const now = Date.now();
+    const windowStart = now - this.windowMs;
+
+    let timestamps = this.logs.get(key) || [];
+    timestamps = timestamps.filter((t) => t > windowStart);
+    timestamps.push(now);
+    this.logs.set(key, timestamps);
+
+    return {
+      count: timestamps.length,
+      resetTime: timestamps[0] + this.windowMs,
+    };
+  }
+
+  async reset(key: string): Promise<void> {
+    this.logs.delete(key);
+  }
+}
+
 export { MemoryStore };
