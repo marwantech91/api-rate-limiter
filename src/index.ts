@@ -107,3 +107,11 @@ export class SlidingWindowStore implements Store {
 }
 
 export { MemoryStore };
+
+// Helper to create rate limiter with sliding window
+export function slidingWindowRateLimit(options: Omit<RateLimitOptions, 'store'> & { windowMs: number }) {
+  return rateLimit({
+    ...options,
+    store: new SlidingWindowStore(options.windowMs),
+  });
+}
