@@ -108,6 +108,16 @@ export class SlidingWindowStore implements Store {
 
 export { MemoryStore };
 
+/** Returns the number of remaining requests for a given key */
+export async function getRemainingRequests(
+  store: Store,
+  key: string,
+  max: number
+): Promise<number> {
+  const { count } = await store.increment(key);
+  return Math.max(0, max - count);
+}
+
 // Helper to create rate limiter with sliding window
 export function slidingWindowRateLimit(options: Omit<RateLimitOptions, 'store'> & { windowMs: number }) {
   return rateLimit({
