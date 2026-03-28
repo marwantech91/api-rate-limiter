@@ -108,6 +108,16 @@ export class SlidingWindowStore implements Store {
 
 export { MemoryStore };
 
+/** Check if a given key has exceeded the rate limit */
+export async function isRateLimited(
+  store: Store,
+  key: string,
+  max: number
+): Promise<boolean> {
+  const { count } = await store.increment(key);
+  return count > max;
+}
+
 /** Returns the number of remaining requests for a given key */
 export async function getRemainingRequests(
   store: Store,
