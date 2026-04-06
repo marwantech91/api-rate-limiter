@@ -135,3 +135,34 @@ export function slidingWindowRateLimit(options: Omit<RateLimitOptions, 'store'> 
     store: new SlidingWindowStore(options.windowMs),
   });
 }
+
+/** Tiered rate limiting — apply different limits based on request attributes */
+export interface TierConfig {
+  name: string;
+  match: (req: Request) => boolean;
+  max: number;
+  windowMs: number;
+}
+
+export function tieredRateLimit(tiers: TierConfig[], defaultMax = 60, defaultWindowMs = 60000) {
+  const stores = new Map<string, Store>();
+  tiers.forEach((tier) => stores.set(tier.name, new SlidingWindowStore(tier.windowMs)));
+  const defaultStore = new SlidingWindowStore(defaultWindowMs);
+
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const tier = tiers.find((t) => t.match(req));
+    const store = tier ? stores.get(tier.name)! : defaultStore;
+    const max = tier ? tier.max : defaultMax;
+    const key = req.ip || 'unknown';
+
+    const { count, resetTime } = await store.increment(key);
+    res.setHeader('X-RateLimit-Limit', max);
+    res.setHeader('X-RateLimit-Remaining', Math.max(0, max - count));
+
+    if (count > max) {
+      return res.status(429).json({ error: 'Rate limit exceeded' });
+    }
+
+    next();
+  };
+}
