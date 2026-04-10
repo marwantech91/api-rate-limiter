@@ -166,3 +166,16 @@ export function tieredRateLimit(tiers: TierConfig[], defaultMax = 60, defaultWin
     next();
   };
 }
+
+/** Create a rate limiter that uses API keys from the Authorization header */
+export function apiKeyRateLimit(options: Omit<RateLimitOptions, 'keyGenerator'>) {
+  return rateLimit({
+    ...options,
+    keyGenerator: (req: Request) => {
+      const auth = req.headers.authorization || '';
+      if (auth.startsWith('Bearer ')) return auth.slice(7);
+      if (auth.startsWith('ApiKey ')) return auth.slice(6);
+      return req.ip || 'anonymous';
+    },
+  });
+}
